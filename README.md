@@ -34,6 +34,11 @@ Four is the ceiling. A fifth candidate is usually a package, not a service.
 order, and scaffolding them now would let you skip the thinking they exist to
 teach.
 
+The first treasurer workflow is scaffolded inside the existing ledger service
+at [`services/ledger/app/contributions/`](services/ledger/app/contributions/README.md).
+It covers POP review, monthly cutoff dates, and an explainable allocation before
+posting. The package has no working endpoints yet.
+
 ## Build order
 
 | # | Step | Status |
