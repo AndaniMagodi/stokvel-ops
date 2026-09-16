@@ -15,7 +15,4 @@ history.
 
 | ADR | Decision | Status |
 |---|---|---|
-| [0001](0001-record-keeping-not-custodial.md) | Record-keeping rather than custody of funds | To write |
-| [0002](0002-message-broker.md) | Which message broker | To write |
-| [0003](0003-data-ownership.md) | Schema-per-service in one instance | To write |
 | [0004](0004-database-enforced-ledger-invariants.md) | Ledger invariants live in the database | Accepted |

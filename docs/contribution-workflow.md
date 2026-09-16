@@ -1,21 +1,18 @@
-# Contribution workflow scaffold
+# Treasurer contribution workflow
 
-This package belongs in the existing `ledger` backend. It will handle the
-treasurer's monthly workflow; `app/ledger/` remains responsible for immutable
-money postings. These files define places for the next implementation step,
-not working endpoints yet.
+This is the next product workflow to implement in the existing backend.
+The ledger package remains responsible for immutable money postings.
 
 ## Flow
 
-1. `proofs.py`: receive a PDF, photo, screenshot, or payment link. Extract a
+1. Proof review: receive a PDF, photo, screenshot, or payment link. Extract a
    proposed payment date, amount, and reference; suggest a member. Keep the
    original proof and require treasurer review. Confirm receipt against the
    group bank account before accepting the payment.
-2. `periods.py`: determine the contribution window. For example, August runs
-   from 8 August through 7 September, inclusive. A payment on 8 September is
-   in September's window. Store the actual payment date separately from the
-   contribution month.
-3. `allocation.py`: show the proposed breakdown: payment received, carried
+2. Contribution window: August runs from 8 August through 7 September,
+   inclusive. A payment on 8 September is in September's window. Store the
+   actual payment date separately from the contribution month.
+3. Allocation preview: show the proposed breakdown: payment received, carried
    fines paid, current-month fine (if applicable), contribution credited, and
    fines still outstanding. Let the treasurer confirm it before ledger posting.
 4. The ledger records the approved allocation and its source proof. The member
