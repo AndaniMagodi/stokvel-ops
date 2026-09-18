@@ -1,8 +1,9 @@
 """Optional AI extraction from locally read proof text."""
 
 from datetime import date
+import json
 
-from openai import OpenAI, OpenAIError
+from groq import Groq, GroqError
 from pydantic import BaseModel
 
 from app.contributions.proof import ProofSuggestion
@@ -19,6 +20,25 @@ class AIFields(BaseModel):
     reference: str | None
 
 
+RESPONSE_FORMAT = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "payment_proof_fields",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "payment_date": {"type": ["string", "null"]},
+                "amount_cents": {"type": ["integer", "null"]},
+                "reference": {"type": ["string", "null"]},
+            },
+            "required": ["payment_date", "amount_cents", "reference"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+
 INSTRUCTIONS = (
     "Extract one completed bank payment from the supplied proof text. "
     "Return the payment date as YYYY-MM-DD, the paid amount in ZAR cents, "
@@ -31,23 +51,28 @@ INSTRUCTIONS = (
 
 
 def extract_with_ai(text: str) -> ProofSuggestion:
-    if not settings.openai_api_key:
-        raise AIProofUnavailable("Set OPENAI_API_KEY in services/ledger/.env to enable AI extraction")
+    if not settings.groq_api_key:
+        raise AIProofUnavailable("Set GROQ_API_KEY in services/ledger/.env to enable AI extraction")
     try:
-        client = OpenAI(api_key=settings.openai_api_key, timeout=25.0, max_retries=1)
-        response = client.responses.parse(
-            model=settings.openai_proof_model,
-            instructions=INSTRUCTIONS,
-            input=[{"role": "user", "content": text[:12_000]}],
-            text_format=AIFields,
-            store=False,
+        client = Groq(api_key=settings.groq_api_key, timeout=25.0, max_retries=1)
+        response = client.chat.completions.create(
+            model=settings.groq_proof_model,
+            messages=[
+                {"role": "system", "content": INSTRUCTIONS},
+                {"role": "user", "content": text[:12_000]},
+            ],
+            response_format=RESPONSE_FORMAT,
         )
-    except OpenAIError as exc:
+    except GroqError as exc:
         raise AIProofUnavailable("AI extraction is temporarily unavailable") from exc
 
-    fields = response.output_parsed
-    if fields is None:
+    content = response.choices[0].message.content if response.choices else None
+    if not content:
         raise AIProofUnavailable("AI did not return a usable extraction")
+    try:
+        fields = AIFields.model_validate(json.loads(content))
+    except (ValueError, TypeError) as exc:
+        raise AIProofUnavailable("AI did not return a usable extraction") from exc
 
     payment_date = None
     if fields.payment_date:

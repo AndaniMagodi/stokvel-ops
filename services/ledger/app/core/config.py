@@ -7,8 +7,8 @@ class Settings(BaseSettings):
     database_url: str
     test_database_url: str | None = None
     default_currency: str = "ZAR"
-    openai_api_key: str | None = None
-    openai_proof_model: str = "gpt-4.1-mini"
+    groq_api_key: str | None = None
+    groq_proof_model: str = "qwen/qwen3.8-27b"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
