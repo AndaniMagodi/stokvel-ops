@@ -30,9 +30,12 @@ After running migrations, open `http://localhost:8001/docs`:
 2. `POST /payments/proof/inspect` accepts one PDF, PNG, or JPEG (up to 5 MB;
    PDFs up to 3 pages) and suggests a date, amount, and reference. Supply
    `group_id` in the form to suggest a member when its reference matches a
-   registered alias. OCR can change spacing, which matching ignores. It saves
-   nothing. Check the proof and bank statement yourself. Payment links are
-   entered manually for now.
+   registered alias. Set `use_ai=true` to use OpenAI's structured extraction
+   when bank wording differs; this sends extracted proof text to OpenAI and
+   requires `OPENAI_API_KEY` in `services/ledger/.env`. The default local
+   extraction stays on your machine. OCR can change spacing, which matching
+   ignores. Inspection saves nothing. Check the proof and bank statement
+   yourself. Payment links are entered manually for now.
 3. `POST /missed-months` records a missed month after its 7th-of-next-month
    cutoff. For now this is a manual step based on the treasurer's records.
 4. `POST /payments/preview` reads that member's outstanding months and shows

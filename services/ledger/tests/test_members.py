@@ -3,7 +3,6 @@ import uuid
 from fastapi.testclient import TestClient
 
 from app.contributions.members import find_member_by_reference
-from app.contributions.proof import ProofSuggestion
 from app.db.session import get_db
 from app.main import app
 
@@ -22,8 +21,8 @@ def test_member_registration_and_exact_reference_suggestion(db, group_id, monkey
         assert find_member_by_reference(db, uuid.uuid4(), "A MEMBER") is None
 
         monkeypatch.setattr(
-            "app.api.contributions.inspect_proof",
-            lambda _: ProofSuggestion("2026-08-31", 30_000, "AMEMBER", ["Review proof"]),
+            "app.api.contributions.extract_proof_text",
+            lambda _: "Payment Date 31/08/2026\nAmount R300.00\nReference AMEMBER",
         )
         inspected = client.post(
             "/payments/proof/inspect",

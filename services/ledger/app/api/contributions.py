@@ -1,6 +1,6 @@
 """Local treasurer endpoints for manual payment review."""
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import date, datetime
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -17,7 +17,8 @@ from app.contributions.workflow import (
     mark_missed_month,
     preview_payment,
 )
-from app.contributions.proof import MAX_FILE_BYTES, ProofError, inspect_proof
+from app.contributions.proof import MAX_FILE_BYTES, ProofError, extract_proof_text, suggest_proof_fields
+from app.contributions.ai_proof import AIProofUnavailable, extract_with_ai
 from app.contributions.members import find_member_by_reference
 from app.db.session import get_db
 
@@ -31,6 +32,7 @@ class ProofSuggestionResponse(BaseModel):
     reference: str | None
     suggested_member_id: UUID | None = None
     suggested_member_name: str | None = None
+    extraction_method: str
     warnings: list[str]
 
 
@@ -38,13 +40,29 @@ class ProofSuggestionResponse(BaseModel):
 async def payment_proof_inspect(
     file: UploadFile = File(...),
     group_id: UUID | None = Form(None),
+    use_ai: bool = Form(False),
     db: Session = Depends(get_db),
 ) -> ProofSuggestionResponse:
     data = await file.read(MAX_FILE_BYTES + 1)
     try:
-        suggestion = inspect_proof(data)
+        text = extract_proof_text(data)
+        local = suggest_proof_fields(text)
+        suggestion = local
+        if use_ai:
+            suggestion = extract_with_ai(text)
+            if any(
+                getattr(local, field) is not None
+                and getattr(local, field) != getattr(suggestion, field)
+                for field in ("payment_date", "amount_cents", "reference")
+            ):
+                suggestion = replace(
+                    suggestion,
+                    warnings=[*suggestion.warnings, "AI and local extraction differ; compare both with the proof."],
+                )
     except ProofError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except AIProofUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     match = (
         find_member_by_reference(db, group_id, suggestion.reference)
         if group_id is not None and suggestion.reference else None
@@ -53,6 +71,7 @@ async def payment_proof_inspect(
         **vars(suggestion),
         suggested_member_id=match.id if match else None,
         suggested_member_name=match.name if match else None,
+        extraction_method="ai" if use_ai else "local",
     )
 
 
