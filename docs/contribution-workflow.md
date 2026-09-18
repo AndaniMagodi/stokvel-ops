@@ -1,9 +1,8 @@
 # Treasurer contribution workflow
 
-This is the next product workflow to implement in the existing backend.
-The ledger package remains responsible for immutable money postings.
-The date-window, amount-allocation, and manual preview/confirmation code live in
-`services/ledger/app/contributions/`. POP file upload and extraction remain future work.
+The ledger package handles immutable money postings. Contribution rules,
+proof extraction, monthly review, and payment confirmation live in
+`services/ledger/app/contributions/`.
 
 ## Flow
 
@@ -30,6 +29,10 @@ month. Split payments require another rule before they can be safely automated.
 
 - The contribution window for month M is the 8th of M through the 7th of M+1.
 - An unpaid month becomes missed after its window closes.
+- The group missed-month review includes a month only when no payment was
+  recorded in that month's window. It starts from each member's configured
+  first expected month. Existing members without that date are skipped until
+  configured. Review candidates against the bank statement before confirming.
 - Each missed month adds R100. Unpaid fines carry forward.
 - Fines are deducted before the remaining amount is credited as a contribution.
 - If that remaining amount is below the R300 minimum, another R100 is deducted

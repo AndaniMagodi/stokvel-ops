@@ -21,6 +21,8 @@ class MemberCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     references: list[str] = Field(min_length=1)
     member_id: UUID | None = None
+    first_expected_year: int | None = None
+    first_expected_month: int | None = Field(default=None, ge=1, le=12)
 
 
 class MemberResponse(BaseModel):
@@ -28,6 +30,13 @@ class MemberResponse(BaseModel):
     group_id: UUID
     name: str
     references: list[str]
+    first_expected_year: int | None
+    first_expected_month: int | None
+
+
+class FirstExpectedMonthRequest(BaseModel):
+    year: int
+    month: int = Field(ge=1, le=12)
 
 
 @router.post("/members", response_model=MemberResponse, status_code=201)
@@ -36,10 +45,14 @@ def create_member(request: MemberCreate, db: Session = Depends(get_db)) -> Membe
         member = register_member(
             db, request.group_id, request.name, request.references,
             member_id=request.member_id,
+            first_expected_year=request.first_expected_year,
+            first_expected_month=request.first_expected_month,
         )
         response = MemberResponse(
             id=member.id, group_id=member.group_id,
             name=member.name, references=[value.strip() for value in request.references],
+            first_expected_year=member.first_expected_year,
+            first_expected_month=member.first_expected_month,
         )
         db.commit()
         return response
@@ -62,6 +75,32 @@ def list_members(group_id: UUID, db: Session = Depends(get_db)) -> list[MemberRe
         MemberResponse(
             id=member.id, group_id=group_id,
             name=member.name, references=by_member.get(member.id, []),
+            first_expected_year=member.first_expected_year,
+            first_expected_month=member.first_expected_month,
         )
         for member in members
     ]
+
+
+@router.patch(
+    "/groups/{group_id}/members/{member_id}/first-expected-month",
+    response_model=MemberResponse,
+)
+def set_first_expected_month(
+    group_id: UUID, member_id: UUID, request: FirstExpectedMonthRequest,
+    db: Session = Depends(get_db),
+) -> MemberResponse:
+    member = db.scalar(select(Member).where(Member.group_id == group_id, Member.id == member_id))
+    if member is None:
+        raise HTTPException(status_code=404, detail="Member not found in group")
+    member.first_expected_year = request.year
+    member.first_expected_month = request.month
+    references = db.scalars(
+        select(MemberReference.reference).where(MemberReference.member_id == member_id)
+    ).all()
+    db.commit()
+    return MemberResponse(
+        id=member.id, group_id=group_id, name=member.name, references=list(references),
+        first_expected_year=member.first_expected_year,
+        first_expected_month=member.first_expected_month,
+    )

@@ -36,6 +36,12 @@ def test_member_registration_and_exact_reference_suggestion(db, group_id, monkey
         listed = client.get(f"/groups/{group_id}/members")
         assert listed.status_code == 200
         assert listed.json()[0]["references"] == ["A MEMBER"]
+        updated = client.patch(
+            f"/groups/{group_id}/members/{member_id}/first-expected-month",
+            json={"year": 2026, "month": 8},
+        )
+        assert updated.status_code == 200
+        assert updated.json()["first_expected_month"] == 8
     finally:
         app.dependency_overrides.clear()
 

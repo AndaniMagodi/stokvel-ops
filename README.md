@@ -24,8 +24,10 @@ contribution. August's contribution window, for example, is 8 August through
 
 After running migrations, open `http://localhost:8001/docs`:
 
-1. `POST /members` registers a name and one or more payment references. You
-   can supply an existing `member_id` to keep earlier payment records linked.
+1. `POST /members` registers a name, payment references, and optionally the
+   first month they were expected to contribute. You can supply an existing
+   `member_id` to keep earlier records linked. Existing members can use
+   `PATCH /groups/{group_id}/members/{member_id}/first-expected-month`.
    `GET /groups/{group_id}/members` lists the directory.
 2. `POST /payments/proof/inspect` accepts one PDF, PNG, or JPEG (up to 5 MB;
    PDFs up to 3 pages) and suggests a date, amount, and reference. Supply
@@ -36,8 +38,13 @@ After running migrations, open `http://localhost:8001/docs`:
    extraction stays on your machine. OCR can change spacing, which matching
    ignores. Inspection saves nothing. Check the proof and bank statement
    yourself. Payment links are entered manually for now.
-3. `POST /missed-months` records a missed month after its 7th-of-next-month
-   cutoff. For now this is a manual step based on the treasurer's records.
+3. `GET /groups/{group_id}/missed-months/review` lists registered members with
+   no recorded payment in each closed contribution month, from their first
+   expected month onward. It also lists members whose first month is unset.
+   After checking against the bank statement, use
+   `POST /groups/{group_id}/missed-months/confirm` to record R100 per missed
+   month. Repeating it does not add another fine. `POST /missed-months` remains
+   available for one manually reviewed month.
 4. `POST /payments/preview` reads that member's outstanding months and shows
    the fines, contribution, and red-to-green changes. It saves nothing.
 5. `POST /payments/confirm` recalculates and saves the reviewed payment,

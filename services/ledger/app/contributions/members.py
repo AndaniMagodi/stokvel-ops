@@ -15,6 +15,8 @@ def normalize_reference(reference: str) -> str:
 def register_member(
     db: Session, group_id: UUID, name: str, references: list[str],
     *, member_id: UUID | None = None,
+    first_expected_year: int | None = None,
+    first_expected_month: int | None = None,
 ) -> Member:
     name = name.strip()
     if not name:
@@ -24,9 +26,18 @@ def register_member(
         raise ValueError("At least one nonempty payment reference is required")
     if len(set(normalized)) != len(normalized):
         raise ValueError("Duplicate payment references")
+    if (first_expected_year is None) != (first_expected_month is None):
+        raise ValueError("First expected year and month must be supplied together")
+    if first_expected_month is not None and not 1 <= first_expected_month <= 12:
+        raise ValueError("First expected month must be between 1 and 12")
     if member_id is not None and db.get(Member, member_id) is not None:
         raise ValueError("Member ID already exists")
-    member = Member(id=member_id, group_id=group_id, name=name) if member_id else Member(group_id=group_id, name=name)
+    details = dict(
+        group_id=group_id, name=name,
+        first_expected_year=first_expected_year,
+        first_expected_month=first_expected_month,
+    )
+    member = Member(id=member_id, **details) if member_id else Member(**details)
     db.add(member)
     db.flush()
     for reference, value in zip(references, normalized, strict=True):

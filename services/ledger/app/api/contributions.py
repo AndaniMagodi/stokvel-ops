@@ -20,6 +20,7 @@ from app.contributions.workflow import (
 from app.contributions.proof import MAX_FILE_BYTES, ProofError, extract_proof_text, suggest_proof_fields
 from app.contributions.ai_proof import AIProofUnavailable, extract_with_ai
 from app.contributions.members import find_member_by_reference
+from app.contributions.reconciliation import confirm_missed_months, review_missed_months
 from app.db.session import get_db
 
 
@@ -131,6 +132,58 @@ class MissedMonthResponse(BaseModel):
     cleared: bool
 
 
+class MissingCandidateResponse(BaseModel):
+    member_id: UUID
+    member_name: str
+    year: int
+    month: int
+    fine_due_cents: int
+
+
+class MissingReviewResponse(BaseModel):
+    candidates: list[MissingCandidateResponse]
+    unconfigured_members: list[UUID]
+    candidate_fines_cents: int
+
+
+def _missing_response(review) -> MissingReviewResponse:
+    return MissingReviewResponse(
+        candidates=[asdict(item) for item in review.candidates],
+        unconfigured_members=list(review.unconfigured_members),
+        candidate_fines_cents=sum(item.fine_due_cents for item in review.candidates),
+    )
+
+
+def _today() -> date:
+    return datetime.now(ZoneInfo("Africa/Johannesburg")).date()
+
+
+@router.get("/groups/{group_id}/missed-months/review", response_model=MissingReviewResponse)
+def missed_months_review(
+    group_id: UUID, db: Session = Depends(get_db),
+) -> MissingReviewResponse:
+    try:
+        return _missing_response(review_missed_months(db, group_id, as_of=_today()))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/groups/{group_id}/missed-months/confirm", response_model=MissingReviewResponse)
+def missed_months_confirm(
+    group_id: UUID, db: Session = Depends(get_db),
+) -> MissingReviewResponse:
+    try:
+        result = confirm_missed_months(db, group_id, as_of=_today())
+        db.commit()
+        return _missing_response(result)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Month changed during confirmation; review again") from exc
+
+
 def _preview_response(preview) -> PreviewResponse:
     allocation = asdict(preview.allocation)
     allocation["fines_received_cents"] = preview.allocation.fines_received_cents
@@ -153,7 +206,7 @@ def record_missed_month(
             request.member_id,
             request.year,
             request.month,
-            as_of=datetime.now(ZoneInfo("Africa/Johannesburg")).date(),
+            as_of=_today(),
         )
         db.commit()
     except PaymentConflict as exc:
