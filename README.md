@@ -8,9 +8,10 @@ for every amount recorded. The system records payments; it does not hold funds.
 
 - A Python/FastAPI backend in `services/ledger`.
 - A PostgreSQL ledger schema with database-enforced balance and history rules.
-- Tests that specify the unfinished ledger posting service.
+- A pure calculation for contribution windows and payment allocations.
 
-POP intake, contribution allocation, and a treasurer interface are not built yet.
+Manual payment review and confirmation are available through the local API.
+POP file upload, automatic extraction, and a treasurer interface are not built yet.
 
 ## Next workflow
 
@@ -18,6 +19,22 @@ The treasurer reviews a payment proof, matches it to a member, confirms the
 payment, and previews how the amount settles carried fines and the current
 contribution. August's contribution window, for example, is 8 August through
 7 September. See [the contribution rules](docs/contribution-workflow.md).
+
+After running migrations, open `http://localhost:8001/docs`:
+
+1. `POST /missed-months` records a missed month after its 7th-of-next-month
+   cutoff. For now this is a manual step based on the treasurer's records.
+2. `POST /payments/preview` reads that member's outstanding months and shows
+   the fines, contribution, and red-to-green changes. It saves nothing.
+3. `POST /payments/confirm` recalculates and saves the reviewed payment,
+   month settlements, and balanced ledger posting together. Reusing the same
+   `proof_key` returns the original confirmation without posting money again.
+
+Use stable group and member UUIDs, a unique `proof_key` for each POP (for
+example, the bank notification's document ID), the payment date, its reference,
+and the amount in **cents**. Confirm receipt in the group bank account before
+using the confirm endpoint. The API is bound to localhost and has no user
+authentication yet; use test data while reviewing the workflow.
 
 ## Run the backend
 

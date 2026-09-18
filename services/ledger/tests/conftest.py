@@ -24,7 +24,14 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-TABLES = ("ledger_entries", "ledger_transactions", "accounts")
+TABLES = (
+    "fine_settlements",
+    "confirmed_payments",
+    "member_months",
+    "ledger_entries",
+    "ledger_transactions",
+    "accounts",
+)
 
 settings.register_profile(
     "db",

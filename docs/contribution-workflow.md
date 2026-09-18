@@ -2,6 +2,8 @@
 
 This is the next product workflow to implement in the existing backend.
 The ledger package remains responsible for immutable money postings.
+The date-window, amount-allocation, and manual preview/confirmation code live in
+`services/ledger/app/contributions/`. POP file upload and extraction remain future work.
 
 ## Flow
 
@@ -14,10 +16,15 @@ The ledger package remains responsible for immutable money postings.
    actual payment date separately from the contribution month.
 3. Allocation preview: show the proposed breakdown: payment received, carried
    fines paid, current-month fine (if applicable), contribution credited, and
-   fines still outstanding. Let the treasurer confirm it before ledger posting.
-4. The ledger records the approved allocation and its source proof. The member
+   fines still outstanding. Apply old fines to missed months oldest first; a
+   month becomes green only when its fine is fully cleared. Let the treasurer
+   confirm the preview before ledger posting.
+4. The ledger records the approved allocation and its proof key. The member
    grid is a view of those records: normal for an ordinary recorded month, red
    for a missed month, and green only when a previously red month is cleared.
+
+The current API supports one confirmed payment per member per contribution
+month. Split payments require another rule before they can be safely automated.
 
 ## Confirmed rules
 
