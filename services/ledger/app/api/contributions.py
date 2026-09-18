@@ -5,7 +5,7 @@ from datetime import date, datetime
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -18,6 +18,7 @@ from app.contributions.workflow import (
     preview_payment,
 )
 from app.contributions.proof import MAX_FILE_BYTES, ProofError, inspect_proof
+from app.contributions.members import find_member_by_reference
 from app.db.session import get_db
 
 
@@ -28,17 +29,31 @@ class ProofSuggestionResponse(BaseModel):
     payment_date: date | None
     amount_cents: int | None
     reference: str | None
+    suggested_member_id: UUID | None = None
+    suggested_member_name: str | None = None
     warnings: list[str]
 
 
 @router.post("/payments/proof/inspect", response_model=ProofSuggestionResponse)
-async def payment_proof_inspect(file: UploadFile = File(...)) -> ProofSuggestionResponse:
+async def payment_proof_inspect(
+    file: UploadFile = File(...),
+    group_id: UUID | None = Form(None),
+    db: Session = Depends(get_db),
+) -> ProofSuggestionResponse:
     data = await file.read(MAX_FILE_BYTES + 1)
     try:
         suggestion = inspect_proof(data)
     except ProofError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return ProofSuggestionResponse(**vars(suggestion))
+    match = (
+        find_member_by_reference(db, group_id, suggestion.reference)
+        if group_id is not None and suggestion.reference else None
+    )
+    return ProofSuggestionResponse(
+        **vars(suggestion),
+        suggested_member_id=match.id if match else None,
+        suggested_member_name=match.name if match else None,
+    )
 
 
 class PaymentRequest(BaseModel):

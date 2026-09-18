@@ -25,6 +25,8 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 TABLES = (
+    "member_references",
+    "members",
     "fine_settlements",
     "confirmed_payments",
     "member_months",
