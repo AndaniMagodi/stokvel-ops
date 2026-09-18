@@ -5,7 +5,9 @@ hypothesis>=6.130,<7
 psycopg2-binary==2.9.11
 pydantic==2.12.5
 pydantic-settings==2.13.1
+pypdf==6.19.0
 pytest==9.1.1
+python-multipart==0.0.32
 python-dotenv==1.2.2
 SQLAlchemy==2.0.48
 uvicorn==0.42.0

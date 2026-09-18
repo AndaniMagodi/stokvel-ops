@@ -5,7 +5,7 @@ from datetime import date, datetime
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -17,10 +17,28 @@ from app.contributions.workflow import (
     mark_missed_month,
     preview_payment,
 )
+from app.contributions.proof import MAX_FILE_BYTES, ProofError, inspect_proof
 from app.db.session import get_db
 
 
 router = APIRouter(tags=["contributions"])
+
+
+class ProofSuggestionResponse(BaseModel):
+    payment_date: date | None
+    amount_cents: int | None
+    reference: str | None
+    warnings: list[str]
+
+
+@router.post("/payments/proof/inspect", response_model=ProofSuggestionResponse)
+async def payment_proof_inspect(file: UploadFile = File(...)) -> ProofSuggestionResponse:
+    data = await file.read(MAX_FILE_BYTES + 1)
+    try:
+        suggestion = inspect_proof(data)
+    except ProofError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return ProofSuggestionResponse(**vars(suggestion))
 
 
 class PaymentRequest(BaseModel):
