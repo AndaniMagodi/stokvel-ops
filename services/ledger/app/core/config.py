@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     whatsapp_app_secret: str | None = None
     whatsapp_access_token: str | None = None
     whatsapp_group_id: str | None = None
-    whatsapp_graph_version: str = "v25.0"
+    whatsapp_graph_version: str = "v26.0"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
