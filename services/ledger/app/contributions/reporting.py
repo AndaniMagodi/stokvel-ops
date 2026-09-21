@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.contributions.periods import contribution_month
-from app.models.contributions import ConfirmedPayment, MemberMonth
+from app.models.contributions import ConfirmedPayment, FineSettlement, MemberMonth
 from app.models.members import Member
 
 
@@ -70,8 +70,23 @@ def monthly_report(
             ConfirmedPayment.contribution_month == month,
         )
     ).all()
+    fine_settlements = db.execute(
+        select(FineSettlement, MemberMonth)
+        .join(MemberMonth, FineSettlement.member_month_id == MemberMonth.id)
+        .where(
+            MemberMonth.group_id == group_id,
+            MemberMonth.year == year,
+            MemberMonth.month == month,
+        )
+    ).all()
     by_member_record = {record.member_id: record for record in records}
     by_member_payment = {payment.member_id: payment for payment in payments}
+    settled_fines_by_member: dict[UUID, int] = {}
+    for settlement, missed_month in fine_settlements:
+        settled_fines_by_member[missed_month.member_id] = (
+            settled_fines_by_member.get(missed_month.member_id, 0)
+            + settlement.fine_paid_cents
+        )
     current_year, current_month = contribution_month(as_of)
     closed = _month_number(year, month) < _month_number(current_year, current_month)
     target = _month_number(year, month)
@@ -104,9 +119,12 @@ def monthly_report(
                 status=status,
                 payment_received_cents=payment.amount_cents if payment else 0,
                 contribution_cents=record.contribution_cents if record else 0,
+                # Old fines belong to the missed month they settle. This lets a
+                # September payment backfill August's "Fine Received" cell.
+                # The minimum-rule fine belongs to the current contribution month.
                 fines_received_cents=(
-                    payment.old_fines_paid_cents + payment.minimum_rule_fine_cents
-                    if payment else 0
+                    settled_fines_by_member.get(member.id, 0)
+                    + (payment.minimum_rule_fine_cents if payment else 0)
                 ),
                 fine_due_cents=record.fine_due_cents if record else 0,
                 fine_paid_cents=record.fine_paid_cents if record else 0,

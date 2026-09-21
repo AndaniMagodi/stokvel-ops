@@ -39,6 +39,7 @@ def test_monthly_report_uses_spreadsheet_colour_rules(db, group_id):
     july = monthly_report(db, group_id, 2026, 7, as_of=date(2026, 9, 18))
     by_name = {item.member_name: item for item in july.members}
     assert by_name["Cleared"].status == "green"
+    assert by_name["Cleared"].fines_received_cents == 10_000
     assert by_name["Red"].status == "red"
     assert by_name["Pending review"].status == "pending_review"
     assert by_name["Future"].status == "not_expected"
@@ -50,10 +51,31 @@ def test_monthly_report_uses_spreadsheet_colour_rules(db, group_id):
     assert august_cleared.status == "normal"
     assert august_cleared.payment_received_cents == 40_000
     assert august_cleared.contribution_cents == 30_000
-    assert august_cleared.fines_received_cents == 10_000
+    assert august_cleared.fines_received_cents == 0
     assert august.payment_received_cents == 40_000
     assert august.contribution_cents == 30_000
+    assert august.fines_received_cents == 0
+
+
+def test_minimum_rule_fine_stays_with_current_contribution_month(db, group_id):
+    member = register_member(
+        db, group_id, "Member", ["MEMBER"],
+        first_expected_year=2026, first_expected_month=7,
+    )
+    mark_missed_month(db, group_id, member.id, 2026, 7, as_of=date(2026, 9, 18))
+    db.commit()
+    confirm_payment(
+        db,
+        PaymentInput(group_id, member.id, "august-proof", date(2026, 8, 31), "MEMBER", 30_000),
+    )
+    db.commit()
+
+    july = monthly_report(db, group_id, 2026, 7, as_of=date(2026, 9, 18))
+    august = monthly_report(db, group_id, 2026, 8, as_of=date(2026, 9, 18))
+
+    assert july.fines_received_cents == 10_000
     assert august.fines_received_cents == 10_000
+    assert august.contribution_cents == 10_000
 
 
 def test_current_open_month_without_payment_is_pending(db, group_id):
