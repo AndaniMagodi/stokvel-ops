@@ -24,7 +24,10 @@ contribution. August's contribution window, for example, is 8 August through
 
 After running migrations, open `http://localhost:8001/docs`:
 
-1. `POST /members` registers a name, payment references, and optionally the
+1. `POST /groups` creates a named stokvel and returns its generated `id`.
+   Repeating the same name returns the existing group. `GET /groups` lists the
+   available stokvels so an interface can select one by name.
+2. `POST /members` registers a name, payment references, and optionally the
    contact number and first month they were expected to contribute. You can supply an existing
    `member_id` to keep earlier records linked. Existing members can use
    the contact-number and first-expected-month `PATCH` endpoints.
@@ -32,7 +35,7 @@ After running migrations, open `http://localhost:8001/docs`:
    `POST /groups/{group_id}/members/import` reads the `MEMBERS` and
    `CONTACT NO` columns from an XLSX workbook and reports missing or shared
    numbers without guessing them.
-2. `POST /payments/proof/inspect` accepts one PDF, PNG, or JPEG (up to 5 MB;
+3. `POST /payments/proof/inspect` accepts one PDF, PNG, or JPEG (up to 5 MB;
    PDFs up to 3 pages) and suggests a date, amount, and reference. Supply
    `group_id` and `sender_phone` in the form to suggest a member. Matching uses
    the phone number and the POP reference, including initial-plus-surname forms.
@@ -43,19 +46,19 @@ After running migrations, open `http://localhost:8001/docs`:
    extraction stays on your machine. OCR can change spacing, which matching
    ignores. Inspection saves nothing. Check the proof and bank statement
    yourself. Payment links are entered manually for now.
-3. `GET /groups/{group_id}/missed-months/review` lists registered members with
+4. `GET /groups/{group_id}/missed-months/review` lists registered members with
    no recorded payment in each closed contribution month, from their first
    expected month onward. It also lists members whose first month is unset.
    After checking against the bank statement, use
    `POST /groups/{group_id}/missed-months/confirm` to record R100 per missed
    month. Repeating it does not add another fine. `POST /missed-months` remains
    available for one manually reviewed month.
-4. `POST /payments/preview` reads that member's outstanding months and shows
+5. `POST /payments/preview` reads that member's outstanding months and shows
    the fines, contribution, and red-to-green changes. It saves nothing.
-5. `POST /payments/confirm` recalculates and saves the reviewed payment,
+6. `POST /payments/confirm` recalculates and saves the reviewed payment,
    month settlements, and balanced ledger posting together. Reusing the same
    `proof_key` returns the original confirmation without posting money again.
-6. `GET /groups/{group_id}/months/{year}/{month}` returns the spreadsheet-style
+7. `GET /groups/{group_id}/months/{year}/{month}` returns the spreadsheet-style
    monthly view and totals. Statuses are `normal` for an ordinary payment,
    `red` for a missed month with an unpaid fine, `green` only when a formerly
    red month is fully cleared, `pending_review` for a closed unrecorded month,

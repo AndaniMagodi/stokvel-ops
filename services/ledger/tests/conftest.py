@@ -25,6 +25,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 TABLES = (
+    "stokvel_groups",
     "member_references",
     "members",
     "fine_settlements",
