@@ -14,11 +14,13 @@ class Member(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid(), primary_key=True, default=uuid.uuid4)
     group_id: Mapped[uuid.UUID] = mapped_column(Uuid(), nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
+    contact_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
     first_expected_year: Mapped[int | None] = mapped_column(nullable=True)
     first_expected_month: Mapped[int | None] = mapped_column(nullable=True)
 
     __table_args__ = (
         Index("ix_members_group", "group_id"),
+        Index("ix_members_group_contact", "group_id", "contact_number"),
         CheckConstraint(
             "(first_expected_year IS NULL AND first_expected_month IS NULL) OR "
             "(first_expected_year IS NOT NULL AND first_expected_month BETWEEN 1 AND 12)",

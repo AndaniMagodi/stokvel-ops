@@ -19,7 +19,7 @@ from app.contributions.workflow import (
 )
 from app.contributions.proof import MAX_FILE_BYTES, ProofError, extract_proof_text, suggest_proof_fields
 from app.contributions.ai_proof import AIProofUnavailable, extract_with_ai
-from app.contributions.members import find_member_by_reference
+from app.contributions.members import match_member
 from app.contributions.reconciliation import confirm_missed_months, review_missed_months
 from app.db.session import get_db
 
@@ -33,6 +33,8 @@ class ProofSuggestionResponse(BaseModel):
     reference: str | None
     suggested_member_id: UUID | None = None
     suggested_member_name: str | None = None
+    match_method: str | None = None
+    match_needs_review: bool = False
     extraction_method: str
     warnings: list[str]
 
@@ -41,6 +43,7 @@ class ProofSuggestionResponse(BaseModel):
 async def payment_proof_inspect(
     file: UploadFile = File(...),
     group_id: UUID | None = Form(None),
+    sender_phone: str | None = Form(None),
     use_ai: bool = Form(False),
     db: Session = Depends(get_db),
 ) -> ProofSuggestionResponse:
@@ -64,14 +67,29 @@ async def payment_proof_inspect(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except AIProofUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    match = (
-        find_member_by_reference(db, group_id, suggestion.reference)
-        if group_id is not None and suggestion.reference else None
-    )
+    try:
+        match, match_method, match_needs_review = (
+            match_member(
+                db, group_id,
+                reference=suggestion.reference,
+                sender_phone=sender_phone,
+            )
+            if group_id is not None else (None, None, False)
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    warnings = list(suggestion.warnings)
+    if match_needs_review:
+        warnings.append("Sender phone and payment reference do not identify one member; select the member manually.")
     return ProofSuggestionResponse(
-        **vars(suggestion),
+        payment_date=suggestion.payment_date,
+        amount_cents=suggestion.amount_cents,
+        reference=suggestion.reference,
+        warnings=warnings,
         suggested_member_id=match.id if match else None,
         suggested_member_name=match.name if match else None,
+        match_method=match_method,
+        match_needs_review=match_needs_review,
         extraction_method="ai" if use_ai else "local",
     )
 

@@ -25,14 +25,19 @@ contribution. August's contribution window, for example, is 8 August through
 After running migrations, open `http://localhost:8001/docs`:
 
 1. `POST /members` registers a name, payment references, and optionally the
-   first month they were expected to contribute. You can supply an existing
+   contact number and first month they were expected to contribute. You can supply an existing
    `member_id` to keep earlier records linked. Existing members can use
-   `PATCH /groups/{group_id}/members/{member_id}/first-expected-month`.
+   the contact-number and first-expected-month `PATCH` endpoints.
    `GET /groups/{group_id}/members` lists the directory.
+   `POST /groups/{group_id}/members/import` reads the `MEMBERS` and
+   `CONTACT NO` columns from an XLSX workbook and reports missing or shared
+   numbers without guessing them.
 2. `POST /payments/proof/inspect` accepts one PDF, PNG, or JPEG (up to 5 MB;
    PDFs up to 3 pages) and suggests a date, amount, and reference. Supply
-   `group_id` in the form to suggest a member when its reference matches a
-   registered alias. Set `use_ai=true` to use Groq's structured extraction
+   `group_id` and `sender_phone` in the form to suggest a member. Matching uses
+   the phone number and the POP reference, including initial-plus-surname forms.
+   A unique phone can match by itself; shared numbers require the reference.
+   Conflicts are returned for manual review. Set `use_ai=true` to use Groq's structured extraction
    when bank wording differs; this sends extracted proof text to Groq and
    requires `GROQ_API_KEY` in `services/ledger/.env`. The default local
    extraction stays on your machine. OCR can change spacing, which matching

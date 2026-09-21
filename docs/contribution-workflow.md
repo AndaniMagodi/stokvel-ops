@@ -7,7 +7,10 @@ proof extraction, monthly review, and payment confirmation live in
 ## Flow
 
 1. Proof review: receive a PDF, photo, screenshot, or payment link. Extract a
-   proposed payment date, amount, and reference; suggest a member. Keep the
+   proposed payment date, amount, and reference; suggest a member using the
+   sender phone and reference together. Normalize local and +27 phone formats.
+   Require review when a number is shared, missing, or conflicts with the
+   reference. Keep the
    original proof and require treasurer review. Confirm receipt against the
    group bank account before accepting the payment.
 2. Contribution window: August runs from 8 August through 7 September,
