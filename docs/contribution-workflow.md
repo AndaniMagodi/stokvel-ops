@@ -21,6 +21,8 @@ proof extraction, monthly review, and payment confirmation live in
 4. The ledger records the approved allocation and its proof key. The member
    grid is a view of those records: normal for an ordinary recorded month, red
    for a missed month, and green only when a previously red month is cleared.
+   A closed month not yet confirmed as missed is `pending_review`; an open
+   contribution month with no payment yet is `pending`.
 
 The current API supports one confirmed payment per member per contribution
 month. Split payments require another rule before they can be safely automated.

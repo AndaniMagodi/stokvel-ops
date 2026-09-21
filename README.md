@@ -50,6 +50,11 @@ After running migrations, open `http://localhost:8001/docs`:
 5. `POST /payments/confirm` recalculates and saves the reviewed payment,
    month settlements, and balanced ledger posting together. Reusing the same
    `proof_key` returns the original confirmation without posting money again.
+6. `GET /groups/{group_id}/months/{year}/{month}` returns the spreadsheet-style
+   monthly view and totals. Statuses are `normal` for an ordinary payment,
+   `red` for a missed month with an unpaid fine, `green` only when a formerly
+   red month is fully cleared, `pending_review` for a closed unrecorded month,
+   and `pending` while the contribution window is still open.
 
 Use stable group and member UUIDs, a unique `proof_key` for each POP (for
 example, the bank notification's document ID), the payment date, its reference,
